@@ -32,9 +32,7 @@ namespace tcp {
       _deadline(io_service),
       _strand(io_service) {}
 
-  ServerSession::~ServerSession() {
-    _deadline.cancel();
-  }
+  ServerSession::~ServerSession() = default;
 
   void ServerSession::Open(callback_function_type callback) {
     StartTimer();
@@ -109,17 +107,14 @@ namespace tcp {
       log_debug("session", _session_id, "timed out");
       Close();
     } else {
-      std::weak_ptr<ServerSession> weak_self = shared_from_this();
-      _deadline.async_wait([weak_self](boost::system::error_code) {
-        auto self = weak_self.lock();
-        if (self != nullptr) {
-          self->StartTimer();
-        }
+      _deadline.async_wait([self = shared_from_this()](boost::system::error_code) {
+        self->StartTimer();
       });
     }
   }
 
   void ServerSession::CloseNow() {
+    _deadline.cancel();
     if (_socket.is_open()) {
       _socket.close();
     }

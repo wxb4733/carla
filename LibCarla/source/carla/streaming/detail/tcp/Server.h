@@ -14,6 +14,8 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include <atomic>
+#include <mutex>
+#include <unordered_map>
 
 namespace carla {
 namespace streaming {
@@ -27,6 +29,8 @@ namespace tcp {
     using protocol_type = endpoint::protocol_type;
 
     explicit Server(boost::asio::io_service &io_service, endpoint ep);
+
+    ~Server();
 
     /// Set session time-out. Applies only to newly created sessions. By default
     /// the time-out is set to 10 seconds.
@@ -45,9 +49,18 @@ namespace tcp {
 
     void OpenSession(time_duration timeout, ServerSession::callback_function_type callback);
 
+    bool RegisterSession(std::shared_ptr<ServerSession> session);
+
     boost::asio::ip::tcp::acceptor _acceptor;
 
     std::atomic<time_duration> _timeout;
+
+    // The mutex only protects the list of active sessions.
+    std::mutex _mutex;
+
+    bool _done = false;
+
+    std::unordered_map<ServerSession *, std::weak_ptr<ServerSession>> _active_sessions;
   };
 
 } // namespace tcp
